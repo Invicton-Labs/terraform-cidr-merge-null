@@ -1,9 +1,9 @@
 module "cidr_merge" {
   source = "../"
-  cidr_sets_ipv4 = [
+  cidr_sets_ipv4 = {
 
     // Set 1
-    [
+    set-0 = [
       "192.168.0.0/24",
       "192.168.1.0/24",
       "192.168.2.0/23",
@@ -21,11 +21,11 @@ module "cidr_merge" {
     ],
 
     // Set 2 (merged independently of Set 1)
-    [
+    set-1 = [
       "0.0.0.0/1",
       "128.0.0.0/1",
     ]
-  ]
+  }
 }
 
 output "merged_cidrs" {
