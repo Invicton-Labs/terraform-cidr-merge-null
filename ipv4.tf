@@ -1,24 +1,22 @@
 locals {
-  // This switches all CIDRs to using a consistent format (first IP of their range, plus prefix),
-  // then takes the distinct set. This ensures they are all, in fact, distinct.
-  cidrs_distinct = {
+  // Extract just the CIDRs from each input value. We'll use the other fields later.
+  cidr_sets_ipv4 = {
     for key, group in var.cidr_sets_ipv4 :
-    key => distinct([
+    key => [
       for cidr in group :
-      "${cidrhost(cidr, 0)}/${split("/", cidr)[1]}"
-    ])
+      cidr.cidr
+    ]
   }
 
   // This adds the first and last IP addresses (in octet format) to each CIDR
   cidrs_with_first_last = {
-    for key, group in local.cidrs_distinct :
+    for key, group in var.cidr_sets_ipv4 :
     key => [
-      for cidr in group :
-      {
-        cidr     = cidr
-        first_ip = cidrhost(cidr, 0)
-        last_ip  = cidrhost(cidr, pow(2, 32 - tonumber(split("/", cidr)[1])) - 1)
-      }
+      for cidr_meta in group :
+      merge(cidr_meta, {
+        first_ip = cidrhost(cidr_meta.cidr, 0)
+        last_ip  = cidrhost(cidr_meta.cidr, pow(2, 32 - tonumber(split("/", cidr_meta.cidr)[1])) - 1)
+      })
     ]
   }
 
@@ -34,9 +32,23 @@ locals {
     ]
   }
 
+  // This switches all CIDRs to using a consistent format (first IP of their range as prefix, plus prefix length),
+  // then takes the distinct set. This ensures they are all, in fact, distinct.
+  cidrs_distinct = {
+    for key, group in local.cidrs_with_first_last_decimal :
+    key => [
+      for cidr in distinct([for cidr_data in group : cidr_data.cidr]) :
+      [
+        for cidr_data in group :
+        cidr_data
+        if cidr_data.cidr == cidr
+      ][0]
+    ]
+  }
+
   // This removes any CIDRs that are contained entirely within a different CIDR in the set
   cidrs_largest_only = {
-    for key, group in local.cidrs_with_first_last_decimal :
+    for key, group in local.cidrs_distinct :
     key => [
       for idx1, cidr_data in group :
       cidr_data
@@ -142,7 +154,10 @@ locals {
           merges = [
             for i in range(cidr_idx, length(contiguous_set)) :
             {
-              first_ip = cidr_data.first_ip
+              first_ip         = cidr_data.first_ip
+              first_ip_decimal = cidr_data.first_ip_decimal
+              last_ip_decimal  = contiguous_set[i].last_ip_decimal
+
               // Calculate the prefix length as 32 minus (the number of IPs in the CIDR, log base 2)
               // There is some floating point precision difficulty, so if the log2 is within 10e-14 of a whole number, we assume it's valid.
               prefix_length = 32 - (
@@ -154,9 +169,7 @@ locals {
 
               // Debugging values
               # cidr_set = slice(contiguous_set, cidr_idx, i + 1)
-              # first_ip_decimal = cidr_data.first_ip_decimal
               # last_ip          = contiguous_set[i].last_ip
-              # last_ip_decimal  = contiguous_set[i].last_ip_decimal
               # ip_count = contiguous_set[i].last_ip_decimal - cidr_data.first_ip_decimal + 1
             }
           ]
@@ -254,7 +267,17 @@ locals {
       for contiguous_set in group :
       [
         for merging in contiguous_set :
-        "${merging.first_ip}/${merging.prefix_length}"
+        {
+          cidr = "${merging.first_ip}/${merging.prefix_length}"
+          contains = [
+            for cidr_meta in local.cidrs_with_first_last_decimal[key] :
+            {
+              cidr     = cidr_meta.cidr
+              metadata = cidr_meta.metadata
+            }
+            if merging.first_ip_decimal <= cidr_meta.first_ip_decimal && merging.last_ip_decimal >= cidr_meta.last_ip_decimal
+          ]
+        }
       ]
     ])
   }
