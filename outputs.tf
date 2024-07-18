@@ -13,6 +13,10 @@ output "merged_cidr_sets_ipv4" {
   description = "The merged CIDR sets."
   value       = local.final_cidrs_ipv4
 }
+output "merged_cidr_sets_ipv4_with_meta" {
+  description = "The merged CIDR sets, with additional metadata including the CIDRs that were merged into this one and additional IP data."
+  value       = local.final_cidrs_ipv4_with_meta
+}
 
 //==================================================
 //             Debugging outputs

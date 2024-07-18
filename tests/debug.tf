@@ -116,3 +116,7 @@ module "cidr_merge" {
 output "merged_cidrs" {
   value = module.cidr_merge.merged_cidr_sets_ipv4
 }
+
+output "merged_cidrs_with_meta" {
+  value = module.cidr_merge.merged_cidr_sets_ipv4_with_meta
+}

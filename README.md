@@ -4,6 +4,8 @@ This module takes one or more input sets of CIDRs and, for each set independentl
 
 The module accepts a map of lists of objects so that multiple CIDR sets can be merged (independently of one another) with a single instance of the module, which prevents a `for_each` or `count` on the module with a value that may not be known at plan time. Each list in the map contains objects that have fields for a CIDR and metadata. The output of the module includes, for each merged CIDR, the set of CIDR/metadata objects that it contains. This allows metadata such as a description (e.g. "route to database subnet") to be merged by the user to create merged metadata (e.g. a description for a merged CIDR that includes the descriptions for all of the CIDRs contained within).
 
+The module produces two outputs: one is just the merged CIDRs in a list (mapped by the same group keys as the input), while the other contains additional metadata that may be useful.
+
 The module works by:
 1. Converting all CIDRs to use their first IP address as the prefix (e.g. `["10.0.1.0/16"]` becomes `["10.0.0.0/16"]`).
 1. Removing any duplicate CIDRs.
@@ -142,6 +144,18 @@ Outputs:
 
 merged_cidrs = {
   "set-0" = [
+    "1.0.0.0/14",
+    "1.4.0.0/15",
+    "1.6.0.0/17",
+    "192.168.0.0/21",
+    "192.168.8.0/24",
+  ]
+  "set-1" = [
+    "0.0.0.0/0",
+  ]
+}
+merged_cidrs_with_meta = {
+  "set-0" = [
     {
       "cidr" = "1.0.0.0/14"
       "contains" = [
@@ -164,6 +178,10 @@ merged_cidrs = {
           }
         },
       ]
+      "first_ip" = "1.0.0.0"
+      "first_ip_decimal" = 16777216
+      "last_ip" = "1.3.255.255"
+      "last_ip_decimal" = 17039359
     },
     {
       "cidr" = "1.4.0.0/15"
@@ -181,6 +199,10 @@ merged_cidrs = {
           }
         },
       ]
+      "first_ip" = "1.4.0.0"
+      "first_ip_decimal" = 17039360
+      "last_ip" = "1.5.255.255"
+      "last_ip_decimal" = 17170431
     },
     {
       "cidr" = "1.6.0.0/17"
@@ -198,6 +220,10 @@ merged_cidrs = {
           }
         },
       ]
+      "first_ip" = "1.6.0.0"
+      "first_ip_decimal" = 17170432
+      "last_ip" = "1.6.127.255"
+      "last_ip_decimal" = 17203199
     },
     {
       "cidr" = "192.168.0.0/21"
@@ -245,6 +271,10 @@ merged_cidrs = {
           }
         },
       ]
+      "first_ip" = "192.168.0.0"
+      "first_ip_decimal" = 3232235520
+      "last_ip" = "192.168.7.255"
+      "last_ip_decimal" = 3232237567
     },
     {
       "cidr" = "192.168.8.0/24"
@@ -256,6 +286,10 @@ merged_cidrs = {
           }
         },
       ]
+      "first_ip" = "192.168.8.0"
+      "first_ip_decimal" = 3232237568
+      "last_ip" = "192.168.8.255"
+      "last_ip_decimal" = 3232237823
     },
   ]
   "set-1" = [
@@ -275,6 +309,10 @@ merged_cidrs = {
           }
         },
       ]
+      "first_ip" = "0.0.0.0"
+      "first_ip_decimal" = 0
+      "last_ip" = "255.255.255.255"
+      "last_ip_decimal" = 4294967295
     },
   ]
 }

@@ -156,6 +156,7 @@ locals {
             {
               first_ip         = cidr_data.first_ip
               first_ip_decimal = cidr_data.first_ip_decimal
+              last_ip          = contiguous_set[i].last_ip
               last_ip_decimal  = contiguous_set[i].last_ip_decimal
 
               // Calculate the prefix length as 32 minus (the number of IPs in the CIDR, log base 2)
@@ -169,7 +170,6 @@ locals {
 
               // Debugging values
               # cidr_set = slice(contiguous_set, cidr_idx, i + 1)
-              # last_ip          = contiguous_set[i].last_ip
               # ip_count = contiguous_set[i].last_ip_decimal - cidr_data.first_ip_decimal + 1
             }
           ]
@@ -261,14 +261,18 @@ locals {
   }
 
   // Create the final list of CIDRs, which is all of the merges from all of the contiguous sets.
-  final_cidrs_ipv4 = {
+  final_cidrs_ipv4_with_meta = {
     for key, group in local.merged_cidrs :
     key => flatten([
       for contiguous_set in group :
       [
         for merging in contiguous_set :
         {
-          cidr = "${merging.first_ip}/${merging.prefix_length}"
+          cidr             = "${merging.first_ip}/${merging.prefix_length}"
+          first_ip         = merging.first_ip
+          last_ip          = merging.last_ip
+          first_ip_decimal = merging.first_ip_decimal
+          last_ip_decimal  = merging.last_ip_decimal
           contains = [
             for cidr_meta in local.cidrs_with_first_last_decimal[key] :
             {
@@ -280,5 +284,13 @@ locals {
         }
       ]
     ])
+  }
+
+  final_cidrs_ipv4 = {
+    for key, group in local.final_cidrs_ipv4_with_meta :
+    key => [
+      for cidr_data in group :
+      cidr_data.cidr
+    ]
   }
 }
